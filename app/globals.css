@@ -1,7 +1,8 @@
 :root {
   color-scheme: light;
   --bg: #f5f7fb;
-  --panel: rgba(255, 255, 255, 0.9);
+  --panel: rgba(255, 255, 255, 0.92);
+  --subpanel: #fbfcff;
   --border: #d9e1ec;
   --text: #102033;
   --muted: #5b6b7c;
@@ -40,6 +41,7 @@ td {
   border-bottom: 1px solid var(--border);
   text-align: right;
   white-space: nowrap;
+  vertical-align: middle;
 }
 
 th:first-child,
@@ -57,7 +59,7 @@ th {
 
 .page-shell {
   margin: 0 auto;
-  max-width: 1040px;
+  max-width: 1320px;
 }
 
 .panel {
@@ -69,11 +71,15 @@ th {
   padding: 28px;
 }
 
-.panel-header {
+.panel-header,
+.subpanel-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+}
+
+.panel-header {
   margin-bottom: 20px;
 }
 
@@ -85,11 +91,19 @@ th {
   text-transform: uppercase;
 }
 
-h1 {
+h1,
+h2 {
   margin: 0;
-  font-size: clamp(2rem, 4vw, 3rem);
   line-height: 1;
   font-weight: 600;
+}
+
+h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+h2 {
+  font-size: 1.5rem;
 }
 
 .timestamp,
@@ -109,6 +123,17 @@ h1 {
   letter-spacing: 0.04em;
 }
 
+.ticker-cell {
+  min-width: 140px;
+}
+
+.stock-price {
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
 .positive {
   color: var(--positive);
 }
@@ -125,9 +150,66 @@ h1 {
   margin-top: 18px;
 }
 
+.lower-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.95fr);
+  gap: 22px;
+  margin-top: 28px;
+}
+
+.subpanel {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--subpanel);
+  padding: 20px;
+}
+
+.chart-panel {
+  overflow: hidden;
+}
+
+.chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin-top: 12px;
+}
+
+.chart-grid {
+  stroke: #d8dfeb;
+  stroke-width: 1;
+}
+
+.chart-zero {
+  stroke: #91a0b3;
+  stroke-dasharray: 4 4;
+  stroke-width: 1.2;
+}
+
+.chart-axis,
+.chart-label {
+  fill: var(--muted);
+  font-size: 12px;
+}
+
+.chart-label {
+  font-weight: 700;
+}
+
+.compact-table td,
+.compact-table th {
+  padding: 12px 12px;
+}
+
 .error-message {
   margin: 16px 0 0;
   color: var(--negative);
+}
+
+@media (max-width: 980px) {
+  .lower-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -142,5 +224,9 @@ h1 {
 
   .panel-header {
     flex-direction: column;
+  }
+
+  .subpanel {
+    padding: 16px;
   }
 }

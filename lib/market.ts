@@ -1,5 +1,14 @@
 const TICKERS = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA"] as const
 export const metrics = ["1D", "7D", "MTD", "QTD", "YTD"] as const
+export const chartColors = {
+  AAPL: "#5c7cfa",
+  MSFT: "#0f8a5f",
+  NVDA: "#16a34a",
+  AMZN: "#f59e0b",
+  GOOGL: "#2563eb",
+  META: "#c83b3b",
+  TSLA: "#7c3aed"
+} as const
 
 type Metric = (typeof metrics)[number]
 
@@ -10,14 +19,33 @@ type PricePoint = {
 
 type ReturnMap = Record<Metric, number | null>
 
-type Row = {
-  ticker: string
-  returns: ReturnMap
+type ChartPoint = {
+  date: string
+  value: number
 }
 
-type DashboardData = {
+type QuoteStats = {
+  marketCap: number | null
+  trailingPE: number | null
+  priceToBook: number | null
+  volume: number | null
+  currentPrice: number | null
+}
+
+export type Row = {
+  ticker: string
+  currentPrice: number | null
+  returns: ReturnMap
+  stats: Omit<QuoteStats, "currentPrice">
+}
+
+export type DashboardData = {
   latestUpdateDate: string
   rows: Row[]
+  ytdChart: Array<{
+    ticker: string
+    points: ChartPoint[]
+  }>
 }
 
 type YahooChartResponse = {
@@ -32,6 +60,19 @@ type YahooChartResponse = {
           close?: Array<number | null>
         }>
       }
+    }>
+  }
+}
+
+type YahooQuoteResponse = {
+  quoteResponse?: {
+    result?: Array<{
+      symbol?: string
+      marketCap?: number
+      trailingPE?: number
+      priceToBook?: number
+      regularMarketVolume?: number
+      regularMarketPrice?: number
     }>
   }
 }
@@ -135,6 +176,42 @@ async function fetchTickerHistory(ticker: string) {
   return points
 }
 
+async function fetchQuoteStats() {
+  const symbols = TICKERS.join(",")
+  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}`
+  const response = await fetch(url, {
+    next: { revalidate: 3600 },
+    headers: {
+      "User-Agent": "Mozilla/5.0"
+    }
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch stock overview data.")
+  }
+
+  const data = (await response.json()) as YahooQuoteResponse
+  const results = data.quoteResponse?.result ?? []
+
+  return results.reduce<Record<string, QuoteStats>>((accumulator, item) => {
+    const symbol = item.symbol
+
+    if (!symbol) {
+      return accumulator
+    }
+
+    accumulator[symbol] = {
+      marketCap: item.marketCap ?? null,
+      trailingPE: item.trailingPE ?? null,
+      priceToBook: item.priceToBook ?? null,
+      volume: item.regularMarketVolume ?? null,
+      currentPrice: item.regularMarketPrice ?? null
+    }
+
+    return accumulator
+  }, {})
+}
+
 function buildReturns(points: PricePoint[]): ReturnMap {
   const latest = points[points.length - 1]
   const anchors: Record<Metric, string> = {
@@ -152,16 +229,35 @@ function buildReturns(points: PricePoint[]): ReturnMap {
   }, {} as ReturnMap)
 }
 
+function buildYtdSeries(points: PricePoint[]) {
+  const latest = points[points.length - 1]
+  const basePoint = findPreviousTradingPoint(points, getYearStart(latest.date))
+
+  if (!basePoint) {
+    return []
+  }
+
+  return points
+    .filter((point) => point.date >= basePoint.date)
+    .map((point) => ({
+      date: point.date,
+      value: calculateReturn(point.close, basePoint.close) ?? 0
+    }))
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
-  const histories = await Promise.all(
-    TICKERS.map(async (ticker) => {
-      const points = await fetchTickerHistory(ticker)
-      return {
-        ticker,
-        points
-      }
-    })
-  )
+  const [histories, statsByTicker] = await Promise.all([
+    Promise.all(
+      TICKERS.map(async (ticker) => {
+        const points = await fetchTickerHistory(ticker)
+        return {
+          ticker,
+          points
+        }
+      })
+    ),
+    fetchQuoteStats()
+  ])
 
   const latestUpdateDate = histories
     .map((item) => item.points[item.points.length - 1].date)
@@ -171,7 +267,19 @@ export async function getDashboardData(): Promise<DashboardData> {
     latestUpdateDate,
     rows: histories.map((item) => ({
       ticker: item.ticker,
-      returns: buildReturns(item.points)
+      currentPrice:
+        statsByTicker[item.ticker]?.currentPrice ?? item.points[item.points.length - 1].close,
+      returns: buildReturns(item.points),
+      stats: {
+        marketCap: statsByTicker[item.ticker]?.marketCap ?? null,
+        trailingPE: statsByTicker[item.ticker]?.trailingPE ?? null,
+        priceToBook: statsByTicker[item.ticker]?.priceToBook ?? null,
+        volume: statsByTicker[item.ticker]?.volume ?? null
+      }
+    })),
+    ytdChart: histories.map((item) => ({
+      ticker: item.ticker,
+      points: buildYtdSeries(item.points)
     }))
   }
 }
