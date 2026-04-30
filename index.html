@@ -187,6 +187,24 @@
       padding: 0;
     }
 
+    .copy-bar {
+      padding: 8px 16px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    #copy-btn {
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 500;
+      border: none;
+      border-radius: 8px;
+      background: #f1f5f9;
+      color: #475569;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    #copy-btn:hover { background: #e2e8f0; }
+
     #message {
       text-align: center;
       color: #cbd5e1;
@@ -365,11 +383,31 @@
 
       output.innerHTML = `
         <div class="section">
+          <div class="copy-bar">
+            <button id="copy-btn" onclick="copyTable()">테이블 복사</button>
+          </div>
           <div class="table-wrap">
-            <table><tbody>${tbodyRows}</tbody></table>
+            <table id="main-table"><tbody>${tbodyRows}</tbody></table>
           </div>
         </div>
       `;
+    }
+
+    async function copyTable() {
+      const table = document.getElementById('main-table');
+      if (!table) return;
+      const btn = document.getElementById('copy-btn');
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'text/html': new Blob([table.outerHTML], { type: 'text/html' }) }),
+      ]);
+      btn.textContent = '✓ 복사됨';
+      btn.style.background = '#d1fae5';
+      btn.style.color = '#065f46';
+      setTimeout(() => {
+        btn.textContent = '테이블 복사';
+        btn.style.background = '';
+        btn.style.color = '';
+      }, 2000);
     }
 
     document.getElementById('bond-area').addEventListener('paste', e => {

@@ -64,11 +64,39 @@ function OrangeHeader() {
   );
 }
 
+function CopyButton({ tableRef }: { tableRef: React.RefObject<HTMLTableElement | null> }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback(async () => {
+    const table = tableRef.current;
+    if (!table) return;
+    const html = table.outerHTML;
+    await navigator.clipboard.write([
+      new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }) }),
+    ]);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [tableRef]);
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors"
+      style={{ background: copied ? '#d1fae5' : '#f1f5f9', color: copied ? '#065f46' : '#475569' }}
+    >
+      {copied ? '✓ 복사됨' : '테이블 복사'}
+    </button>
+  );
+}
+
 function TradeTableAll({ grouped }: { grouped: GroupedTrades }) {
+  const tableRef = useRef<HTMLTableElement>(null);
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-slate-100 flex items-center">
+        <CopyButton tableRef={tableRef} />
+      </div>
       <div className="overflow-x-auto">
-        <table className="border-collapse" style={{ tableLayout: 'auto', width: '100%' }}>
+        <table ref={tableRef} className="border-collapse" style={{ tableLayout: 'auto', width: '100%' }}>
           <tbody>
             {grouped.map(([assetType, { sell, buy }], si) => {
               const label = ASSET_LABELS[assetType] ?? assetType;
