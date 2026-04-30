@@ -13,7 +13,7 @@ function fmtQty(q: number) {
 function TradeTable({ records, isFutures }: { records: TradeRecord[]; isFutures: boolean }) {
   if (!records.length) return null;
   const isSell = records[0].tradeType === '매도';
-  const cellCls = 'px-3 py-2 text-center whitespace-nowrap border-r border-slate-200 last:border-r-0';
+  const cellCls = 'px-2 py-1.5 text-[11px] text-center whitespace-nowrap border-r border-slate-200 last:border-r-0';
   const headers = ['매매', '매매처명', '종목명', '펀드코드', '자산', isFutures ? '계약수' : '수량', isFutures ? '단가' : '금리', isFutures ? '' : '상환일'];
   return (
     <div className="overflow-x-auto">
@@ -21,7 +21,7 @@ function TradeTable({ records, isFutures }: { records: TradeRecord[]; isFutures:
         <thead>
           <tr className="border-b border-orange-200" style={{ background: '#FFEDD5' }}>
             {headers.map((h, i) => (
-              <th key={i} className="px-3 py-2 text-[11px] font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap text-center border-r border-orange-200 last:border-r-0">
+              <th key={i} className="px-2 py-1.5 text-[9px] font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap text-center border-r border-orange-200 last:border-r-0">
                 {h}
               </th>
             ))}
@@ -31,7 +31,7 @@ function TradeTable({ records, isFutures }: { records: TradeRecord[]; isFutures:
           {records.map((r, i) => (
             <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors">
               <td className={cellCls}>
-                <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${isSell ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'}`}>
+                <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold ${isSell ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'}`}>
                   {r.tradeType}
                 </span>
               </td>
