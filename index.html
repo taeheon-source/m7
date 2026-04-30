@@ -4,93 +4,197 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>매매내역 정리</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+      font-family: 'Inter', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
       font-size: 13px;
-      color: #222;
-      background: #fff;
-      padding: 32px;
+      color: #1e293b;
+      background: #f8fafc;
+      padding: 40px 48px;
     }
 
-    h1 {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 16px;
+    header { margin-bottom: 28px; }
+
+    header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #0f172a;
+      letter-spacing: -0.3px;
     }
+
+    header p {
+      margin-top: 4px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .paste-box {
+      background: #fff;
+      border: 1.5px dashed #cbd5e1;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 36px;
+      transition: border-color 0.2s;
+    }
+    .paste-box:focus-within { border-color: #6366f1; }
 
     textarea {
       width: 100%;
-      height: 90px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      padding: 10px;
+      height: 72px;
+      border: none;
+      outline: none;
+      resize: none;
       font-family: monospace;
       font-size: 11px;
-      resize: none;
-      outline: none;
-      margin-bottom: 32px;
-      color: #555;
+      color: #475569;
+      background: transparent;
+      line-height: 1.6;
     }
-    textarea:focus { border-color: #f97316; }
+    textarea::placeholder { color: #cbd5e1; }
 
-    .section { margin-bottom: 36px; }
+    .section {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .section-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
     .section-title {
-      font-size: 14px;
-      font-weight: 700;
-      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #0f172a;
     }
+
+    .badge {
+      font-size: 10px;
+      font-weight: 500;
+      padding: 2px 7px;
+      border-radius: 20px;
+      background: #f1f5f9;
+      color: #64748b;
+    }
+
+    .table-wrap { overflow-x: auto; }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 16px;
+      table-layout: fixed;
+    }
+
+    col.c-trade    { width: 58px; }
+    col.c-broker   { width: 130px; }
+    col.c-security { width: auto; }
+    col.c-fund     { width: 82px; }
+    col.c-asset    { width: 100px; }
+    col.c-qty      { width: 76px; }
+    col.c-rate     { width: 70px; }
+    col.c-date     { width: 92px; }
+
+    thead tr {
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
     }
 
     th {
-      background: #f97316;
-      color: #fff;
-      padding: 7px 10px;
-      text-align: center;
-      border: 1px solid #e2e2e2;
+      padding: 9px 12px;
+      font-size: 11px;
       font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
       white-space: nowrap;
+      text-align: center;
     }
+
+    tbody tr {
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.1s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #fafbff; }
 
     td {
-      padding: 5px 10px;
-      border: 1px solid #e2e2e2;
+      padding: 9px 12px;
+      color: #334155;
+      text-align: center;
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    tr:nth-child(even) td { background: #fff7ed; }
-    tr:nth-child(odd) td { background: #fff; }
+    td.td-left {
+      text-align: left;
+      max-width: 0;
+    }
 
-    .col-trade { text-align: center; color: #1d4ed8; }
-    .col-broker { color: #1d4ed8; }
-    .col-center { text-align: center; }
-    .col-right { text-align: right; }
+    .tag-sell {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #fff1f2;
+      color: #e11d48;
+    }
+    .tag-buy {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #eff6ff;
+      color: #2563eb;
+    }
+
+    .broker-name { color: #6366f1; font-weight: 500; }
+
+    td.td-right { text-align: right; font-variant-numeric: tabular-nums; }
+    td.td-rate  { text-align: right; font-variant-numeric: tabular-nums; color: #0f172a; font-weight: 500; }
+
+    .sub-divider {
+      height: 1px;
+      background: #e2e8f0;
+    }
 
     #message {
-      color: #999;
+      text-align: center;
+      color: #cbd5e1;
       font-size: 13px;
+      padding: 60px 0;
     }
   </style>
 </head>
 <body>
-  <h1>매매내역 정리</h1>
-  <textarea id="paste-area" placeholder="매매내역 엑셀 데이터를 여기에 붙여넣으세요..."></textarea>
+  <header>
+    <h1>매매내역 정리</h1>
+    <p>엑셀 매매내역을 아래에 붙여넣으세요</p>
+  </header>
+
+  <div class="paste-box">
+    <textarea id="paste-area" placeholder="여기에 붙여넣기 (Ctrl+V)..."></textarea>
+  </div>
+
   <div id="output"></div>
 
   <script>
-    const ASSET_ORDER = { '채권': 1, '전자단기': 2, '전자단기사채': 2, '선물': 3 };
+    const ASSET_ORDER  = { '채권': 1, '전자단기': 2, '전자단기사채': 2, 'CP': 3, 'CD': 4, '선물': 5 };
     const ASSET_LABELS = { '전자단기': '전자단기사채' };
     const DATE_RE = /^\d{4}\/\d{2}\/\d{2}$/;
 
-    // 컬럼 인덱스
     const COL = {
       date: 0, fundCode: 2, brokerName: 4, securityName: 6,
       assetType: 7, tradeType: 9,
@@ -111,13 +215,13 @@
 
         const faceValue = parseNum(cols[COL.settlementFace]);
         records.push({
-          fundCode: (cols[COL.fundCode] || '').trim(),
-          brokerName: (cols[COL.brokerName] || '').trim(),
+          fundCode:     (cols[COL.fundCode]     || '').trim(),
+          brokerName:   (cols[COL.brokerName]   || '').trim(),
           securityName: (cols[COL.securityName] || '').trim(),
-          assetType: (cols[COL.assetType] || '').trim(),
+          assetType:    (cols[COL.assetType]    || '').trim(),
           tradeType,
-          quantity: faceValue / 1e8,
-          rate: parseNum(cols[COL.settlementRate]),
+          quantity:     faceValue / 1e8,
+          rate:         parseNum(cols[COL.settlementRate]),
           maturityDate: (cols[COL.maturityDate] || '').trim(),
         });
       }
@@ -140,32 +244,41 @@
       return q % 1 === 0 ? q.toLocaleString('ko-KR') : q.toFixed(2);
     }
 
+    const COLGROUP = `
+      <colgroup>
+        <col class="c-trade"/>
+        <col class="c-broker"/>
+        <col class="c-security"/>
+        <col class="c-fund"/>
+        <col class="c-asset"/>
+        <col class="c-qty"/>
+        <col class="c-rate"/>
+        <col class="c-date"/>
+      </colgroup>
+      <thead>
+        <tr>
+          <th>매매</th><th>매매처명</th><th style="text-align:left">종목명</th>
+          <th>펀드코드</th><th>자산</th><th>수량</th><th>금리</th><th>상환일</th>
+        </tr>
+      </thead>
+    `;
+
     function buildTable(records) {
       if (!records.length) return '';
+      const isSell = records[0].tradeType === '매도';
       const rows = records.map(r => `
         <tr>
-          <td class="col-trade">${r.tradeType}</td>
-          <td class="col-broker">${r.brokerName}</td>
-          <td>${r.securityName}</td>
-          <td class="col-center">${r.fundCode}</td>
-          <td class="col-center">${ASSET_LABELS[r.assetType] ?? r.assetType}</td>
-          <td class="col-right">${fmtQty(r.quantity)}</td>
-          <td class="col-right">${r.rate.toFixed(3)}</td>
-          <td class="col-center">${r.maturityDate}</td>
+          <td><span class="${isSell ? 'tag-sell' : 'tag-buy'}">${r.tradeType}</span></td>
+          <td class="broker-name">${r.brokerName}</td>
+          <td class="td-left" title="${r.securityName}">${r.securityName}</td>
+          <td>${r.fundCode}</td>
+          <td>${ASSET_LABELS[r.assetType] ?? r.assetType}</td>
+          <td class="td-right">${fmtQty(r.quantity)}</td>
+          <td class="td-rate">${r.rate.toFixed(3)}</td>
+          <td>${r.maturityDate}</td>
         </tr>
       `).join('');
-      return `
-        <table>
-          <thead>
-            <tr>
-              <th>매매</th><th>매매처명</th><th>종목명</th>
-              <th>펀드코드</th><th>자산</th><th>수량</th>
-              <th>금리</th><th>상환일</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      `;
+      return `<table>${COLGROUP}<tbody>${rows}</tbody></table>`;
     }
 
     function render(raw) {
@@ -180,16 +293,27 @@
       }
 
       const grouped = groupTrades(records);
-      output.innerHTML = grouped.map(([assetType, { sell, buy }]) => `
-        <div class="section">
-          <div class="section-title">${ASSET_LABELS[assetType] ?? assetType}</div>
-          ${buildTable(sell)}
-          ${buildTable(buy)}
-        </div>
-      `).join('');
+      output.innerHTML = grouped.map(([assetType, { sell, buy }]) => {
+        const label   = ASSET_LABELS[assetType] ?? assetType;
+        const total   = sell.length + buy.length;
+        const sellHtml = buildTable(sell);
+        const buyHtml  = buildTable(buy);
+        const divider  = sellHtml && buyHtml ? '<div class="sub-divider"></div>' : '';
+        return `
+          <div class="section">
+            <div class="section-header">
+              <span class="section-title">${label}</span>
+              <span class="badge">${total}건</span>
+            </div>
+            <div class="table-wrap">
+              ${sellHtml}${divider}${buyHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
-    document.getElementById('paste-area').addEventListener('paste', (e) => {
+    document.getElementById('paste-area').addEventListener('paste', e => {
       const text = e.clipboardData.getData('text');
       setTimeout(() => render(text), 0);
     });
