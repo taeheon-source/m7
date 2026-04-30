@@ -50,20 +50,25 @@ function PasteArea({ label, onPaste }: { label: string; onPaste: (text: string) 
   );
 }
 
+const HEADERS = ['매매', '매매처명', '종목명', '펀드코드', '자산', '수량', '금리', '상환일'];
+
+function OrangeHeader() {
+  return (
+    <tr className="border-b border-orange-200" style={{ background: '#FFEDD5' }}>
+      {HEADERS.map((h) => (
+        <th key={h} className="px-2 py-1.5 text-[9px] font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap text-center border-r border-orange-200 last:border-r-0">
+          {h}
+        </th>
+      ))}
+    </tr>
+  );
+}
+
 function TradeTableAll({ grouped }: { grouped: GroupedTrades }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="border-collapse" style={{ tableLayout: 'auto', width: '100%' }}>
-          <thead>
-            <tr className="border-b border-orange-200" style={{ background: '#FFEDD5' }}>
-              {['매매', '매매처명', '종목명', '펀드코드', '자산', '수량', '금리', '상환일'].map((h) => (
-                <th key={h} className="px-2 py-1.5 text-[9px] font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap text-center border-r border-orange-200 last:border-r-0">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
           <tbody>
             {grouped.map(([assetType, { sell, buy }], si) => {
               const label = ASSET_LABELS[assetType] ?? assetType;
@@ -81,6 +86,7 @@ function TradeTableAll({ grouped }: { grouped: GroupedTrades }) {
                       <span className="ml-2 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-500">{total}건</span>
                     </td>
                   </tr>
+                  <OrangeHeader key={`oh-${assetType}`} />
                   {sell.map((r, i) => <DataRow key={`s${assetType}${i}`} r={r} isSell={true} />)}
                   {sell.length > 0 && buy.length > 0 && (
                     <tr key={`div-${assetType}`}>

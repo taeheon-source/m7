@@ -109,7 +109,7 @@
       table-layout: auto;
     }
 
-    thead tr {
+    tr.orange-header {
       background: #FFEDD5;
       border-bottom: 1px solid #fed7aa;
     }
@@ -335,14 +335,12 @@
 
       const grouped = groupTrades(all);
 
-      const thead = `
-        <thead>
-          <tr>
-            <th>매매</th><th>매매처명</th><th>종목명</th>
-            <th>펀드코드</th><th>자산</th>
-            <th>수량</th><th>금리</th><th>상환일</th>
-          </tr>
-        </thead>
+      const orangeHeader = `
+        <tr class="orange-header">
+          <th>매매</th><th>매매처명</th><th>종목명</th>
+          <th>펀드코드</th><th>자산</th>
+          <th>수량</th><th>금리</th><th>상환일</th>
+        </tr>
       `;
 
       const tbodyRows = grouped.map(([assetType, { sell, buy }], si) => {
@@ -358,6 +356,7 @@
               <span class="badge">${total}건</span>
             </td>
           </tr>
+          ${orangeHeader}
           ${sell.map(dataRow).join('')}
           ${div}
           ${buy.map(dataRow).join('')}
@@ -367,7 +366,7 @@
       output.innerHTML = `
         <div class="section">
           <div class="table-wrap">
-            <table>${thead}<tbody>${tbodyRows}</tbody></table>
+            <table><tbody>${tbodyRows}</tbody></table>
           </div>
         </div>
       `;
