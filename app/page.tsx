@@ -18,16 +18,16 @@ function TradeTable({ records, isFutures }: { records: TradeRecord[]; isFutures:
       <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
         <colgroup>
           <col style={{ width: 58 }} />
-          <col style={{ width: 130 }} />
-          <col />
+          <col style={{ width: 160 }} />
+          <col style={{ width: 200 }} />
           <col style={{ width: 82 }} />
-          <col style={{ width: 100 }} />
-          <col style={{ width: 76 }} />
-          <col style={{ width: 76 }} />
+          <col style={{ width: 90 }} />
+          <col style={{ width: 72 }} />
+          <col style={{ width: 72 }} />
           <col style={{ width: 92 }} />
         </colgroup>
         <thead>
-          <tr className="bg-slate-50 border-b border-slate-200">
+          <tr className="border-b border-orange-200" style={{ background: '#FFEDD5' }}>
             {['매매', '매매처명', '종목명', '펀드코드', '자산', isFutures ? '계약수' : '수량', isFutures ? '단가' : '금리', isFutures ? '' : '상환일'].map((h, i) => (
               <th key={i} className="px-3 py-2 text-[11px] font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap"
                 style={{ textAlign: i === 2 ? 'left' : 'center' }}>
