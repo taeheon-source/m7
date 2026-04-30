@@ -169,6 +169,24 @@
 
     .sub-divider { height: 1px; background: #e2e8f0; }
 
+    tr.section-header-row td {
+      background: #f8fafc;
+      padding: 7px 16px;
+      border-bottom: 1px solid #e2e8f0;
+      border-top: 1px solid #e2e8f0;
+    }
+    tr.section-gap td {
+      height: 8px;
+      background: #f8fafc;
+      padding: 0;
+      border-top: 1px solid #e2e8f0;
+    }
+    tr.sell-buy-div td {
+      height: 1px;
+      background: #e2e8f0;
+      padding: 0;
+    }
+
     #message {
       text-align: center;
       color: #cbd5e1;
@@ -284,41 +302,24 @@
       );
     }
 
-    function fmtQty(q, isFutures) {
-      if (isFutures) return q % 1 === 0 ? q.toLocaleString('ko-KR') : q.toFixed(2);
+    function fmtQty(q) {
       return q % 1 === 0 ? q.toLocaleString('ko-KR') : q.toFixed(2);
     }
 
-    function buildthead(isFutures) {
+    function dataRow(r) {
+      const isSell = r.tradeType === '매도';
       return `
-        <thead>
-          <tr>
-            <th>매매</th><th>매매처명</th><th>종목명</th>
-            <th>펀드코드</th><th>자산</th>
-            <th>${isFutures ? '계약수' : '수량'}</th>
-            <th>${isFutures ? '단가' : '금리'}</th>
-            <th>${isFutures ? '' : '상환일'}</th>
-          </tr>
-        </thead>
-      `;
-    }
-
-    function buildTable(records, isFutures) {
-      if (!records.length) return '';
-      const isSell = records[0].tradeType === '매도';
-      const rows = records.map(r => `
         <tr>
           <td><span class="${isSell ? 'tag-sell' : 'tag-buy'}">${r.tradeType}</span></td>
           <td class="broker-name">${r.brokerName}</td>
           <td>${r.securityName}</td>
           <td>${r.fundCode}</td>
           <td>${ASSET_LABELS[r.assetType] ?? r.assetType}</td>
-          <td class="td-right">${fmtQty(r.quantity, isFutures)}</td>
-          <td class="td-rate">${r.rate.toFixed(isFutures ? 2 : 3)}</td>
+          <td class="td-right">${fmtQty(r.quantity)}</td>
+          <td class="td-rate">${r.rate.toFixed(r.isFutures ? 2 : 3)}</td>
           <td>${r.maturityDate}</td>
         </tr>
-      `).join('');
-      return `<table>${buildthead(isFutures)}<tbody>${rows}</tbody></table>`;
+      `;
     }
 
     let bondRaw    = '';
@@ -330,30 +331,46 @@
       const futures = parseFuturesData(futuresRaw);
       const all     = [...bonds, ...futures];
 
-      if (!all.length) {
-        output.innerHTML = '';
-        return;
-      }
+      if (!all.length) { output.innerHTML = ''; return; }
 
       const grouped = groupTrades(all);
-      output.innerHTML = grouped.map(([assetType, { sell, buy, isFutures }]) => {
-        const label    = ASSET_LABELS[assetType] ?? assetType;
-        const total    = sell.length + buy.length;
-        const sellHtml = buildTable(sell, isFutures);
-        const buyHtml  = buildTable(buy, isFutures);
-        const divider  = sellHtml && buyHtml ? '<div class="sub-divider"></div>' : '';
+
+      const thead = `
+        <thead>
+          <tr>
+            <th>매매</th><th>매매처명</th><th>종목명</th>
+            <th>펀드코드</th><th>자산</th>
+            <th>수량</th><th>금리</th><th>상환일</th>
+          </tr>
+        </thead>
+      `;
+
+      const tbodyRows = grouped.map(([assetType, { sell, buy }], si) => {
+        const label = ASSET_LABELS[assetType] ?? assetType;
+        const total = sell.length + buy.length;
+        const gap   = si > 0 ? `<tr class="section-gap"><td colspan="8"></td></tr>` : '';
+        const div   = sell.length && buy.length ? `<tr class="sell-buy-div"><td colspan="8"></td></tr>` : '';
         return `
-          <div class="section">
-            <div class="section-header">
+          ${gap}
+          <tr class="section-header-row">
+            <td colspan="8">
               <span class="section-title">${label}</span>
               <span class="badge">${total}건</span>
-            </div>
-            <div class="table-wrap">
-              ${sellHtml}${divider}${buyHtml}
-            </div>
-          </div>
+            </td>
+          </tr>
+          ${sell.map(dataRow).join('')}
+          ${div}
+          ${buy.map(dataRow).join('')}
         `;
       }).join('');
+
+      output.innerHTML = `
+        <div class="section">
+          <div class="table-wrap">
+            <table>${thead}<tbody>${tbodyRows}</tbody></table>
+          </div>
+        </div>
+      `;
     }
 
     document.getElementById('bond-area').addEventListener('paste', e => {

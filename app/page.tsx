@@ -10,67 +10,28 @@ function fmtQty(q: number) {
   return q % 1 === 0 ? q.toLocaleString('ko-KR') : q.toFixed(2);
 }
 
-function TradeTable({ records, isFutures }: { records: TradeRecord[]; isFutures: boolean }) {
-  if (!records.length) return null;
-  const isSell = records[0].tradeType === '매도';
-  const cellCls = 'px-2 py-1.5 text-[11px] text-center whitespace-nowrap border-r border-slate-200 last:border-r-0';
-  const headers = ['매매', '매매처명', '종목명', '펀드코드', '자산', isFutures ? '계약수' : '수량', isFutures ? '단가' : '금리', isFutures ? '' : '상환일'];
-  return (
-    <div className="overflow-x-auto">
-      <table className="border-collapse" style={{ tableLayout: 'auto', width: '100%' }}>
-        <thead>
-          <tr className="border-b border-orange-200" style={{ background: '#FFEDD5' }}>
-            {headers.map((h, i) => (
-              <th key={i} className="px-2 py-1.5 text-[9px] font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap text-center border-r border-orange-200 last:border-r-0">
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {records.map((r, i) => (
-            <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors">
-              <td className={cellCls}>
-                <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold ${isSell ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'}`}>
-                  {r.tradeType}
-                </span>
-              </td>
-              <td className={`${cellCls} text-indigo-500 font-medium`}>{r.brokerName}</td>
-              <td className={cellCls}>{r.securityName}</td>
-              <td className={cellCls}>{r.fundCode}</td>
-              <td className={cellCls}>{ASSET_LABELS[r.assetType] ?? r.assetType}</td>
-              <td className={`${cellCls} tabular-nums`}>{fmtQty(r.quantity)}</td>
-              <td className={`${cellCls} tabular-nums font-medium`}>{r.rate.toFixed(isFutures ? 2 : 3)}</td>
-              <td className={cellCls}>{r.maturityDate}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+const CELL = 'px-2 py-1.5 text-[11px] text-center whitespace-nowrap border-r border-slate-200 last:border-r-0';
 
-function AssetSection({ assetType, sell, buy, isFutures }: {
-  assetType: string; sell: TradeRecord[]; buy: TradeRecord[]; isFutures: boolean;
-}) {
-  const label = ASSET_LABELS[assetType] ?? assetType;
-  const total = sell.length + buy.length;
-  const hasBoth = sell.length > 0 && buy.length > 0;
+function DataRow({ r, isSell }: { r: TradeRecord; isSell: boolean }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-100 mb-6 overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2">
-        <span className="text-[13px] font-semibold text-slate-900">{label}</span>
-        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">{total}건</span>
-      </div>
-      <TradeTable records={sell} isFutures={isFutures} />
-      {hasBoth && <div className="h-px bg-slate-200" />}
-      <TradeTable records={buy} isFutures={isFutures} />
-    </div>
+    <tr className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors">
+      <td className={CELL}>
+        <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold ${isSell ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'}`}>
+          {r.tradeType}
+        </span>
+      </td>
+      <td className={`${CELL} text-indigo-500 font-medium`}>{r.brokerName}</td>
+      <td className={CELL}>{r.securityName}</td>
+      <td className={CELL}>{r.fundCode}</td>
+      <td className={CELL}>{ASSET_LABELS[r.assetType] ?? r.assetType}</td>
+      <td className={`${CELL} tabular-nums`}>{fmtQty(r.quantity)}</td>
+      <td className={`${CELL} tabular-nums font-medium`}>{r.rate.toFixed(r.isFutures ? 2 : 3)}</td>
+      <td className={CELL}>{r.maturityDate}</td>
+    </tr>
   );
 }
 
 function PasteArea({ label, onPaste }: { label: string; onPaste: (text: string) => void }) {
-  const ref = useRef<HTMLTextAreaElement>(null);
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const text = e.clipboardData.getData('text');
     setTimeout(() => onPaste(text), 0);
@@ -80,12 +41,59 @@ function PasteArea({ label, onPaste }: { label: string; onPaste: (text: string) 
     <div className="bg-white border-2 border-dashed border-slate-200 rounded-xl p-4 focus-within:border-indigo-400 transition-colors">
       <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">{label}</div>
       <textarea
-        ref={ref}
-        className="w-full h-18 bg-transparent border-none outline-none resize-none font-mono text-[11px] text-slate-500 leading-relaxed placeholder:text-slate-300"
+        className="w-full bg-transparent border-none outline-none resize-none font-mono text-[11px] text-slate-500 leading-relaxed placeholder:text-slate-300"
         style={{ height: 72 }}
         placeholder="여기에 붙여넣기 (Ctrl+V)..."
         onPaste={handlePaste}
       />
+    </div>
+  );
+}
+
+function TradeTableAll({ grouped }: { grouped: GroupedTrades }) {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="border-collapse" style={{ tableLayout: 'auto', width: '100%' }}>
+          <thead>
+            <tr className="border-b border-orange-200" style={{ background: '#FFEDD5' }}>
+              {['매매', '매매처명', '종목명', '펀드코드', '자산', '수량', '금리', '상환일'].map((h) => (
+                <th key={h} className="px-2 py-1.5 text-[9px] font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap text-center border-r border-orange-200 last:border-r-0">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {grouped.map(([assetType, { sell, buy }], si) => {
+              const label = ASSET_LABELS[assetType] ?? assetType;
+              const total = sell.length + buy.length;
+              return (
+                <>
+                  {si > 0 && (
+                    <tr key={`gap-${assetType}`}>
+                      <td colSpan={8} className="h-2 bg-slate-50 border-t border-b border-slate-200 p-0" />
+                    </tr>
+                  )}
+                  <tr key={`hd-${assetType}`} className="bg-slate-50 border-b border-slate-200">
+                    <td colSpan={8} className="px-4 py-2">
+                      <span className="text-[12px] font-semibold text-slate-800">{label}</span>
+                      <span className="ml-2 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-500">{total}건</span>
+                    </td>
+                  </tr>
+                  {sell.map((r, i) => <DataRow key={`s${assetType}${i}`} r={r} isSell={true} />)}
+                  {sell.length > 0 && buy.length > 0 && (
+                    <tr key={`div-${assetType}`}>
+                      <td colSpan={8} className="h-px bg-slate-200 p-0" />
+                    </tr>
+                  )}
+                  {buy.map((r, i) => <DataRow key={`b${assetType}${i}`} r={r} isSell={false} />)}
+                </>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -118,9 +126,7 @@ export default function Home() {
         />
       </div>
 
-      {grouped?.map(([assetType, { sell, buy, isFutures }]) => (
-        <AssetSection key={assetType} assetType={assetType} sell={sell} buy={buy} isFutures={isFutures} />
-      ))}
+      {grouped && grouped.length > 0 && <TradeTableAll grouped={grouped} />}
     </main>
   );
 }
