@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>매매내역 정리</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+      font-size: 13px;
+      color: #222;
+      background: #fff;
+      padding: 32px;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 90px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 11px;
+      resize: none;
+      outline: none;
+      margin-bottom: 32px;
+      color: #555;
+    }
+    textarea:focus { border-color: #f97316; }
+
+    .section { margin-bottom: 36px; }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+    }
+
+    th {
+      background: #f97316;
+      color: #fff;
+      padding: 7px 10px;
+      text-align: center;
+      border: 1px solid #e2e2e2;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 5px 10px;
+      border: 1px solid #e2e2e2;
+      white-space: nowrap;
+    }
+
+    tr:nth-child(even) td { background: #fff7ed; }
+    tr:nth-child(odd) td { background: #fff; }
+
+    .col-trade { text-align: center; color: #1d4ed8; }
+    .col-broker { color: #1d4ed8; }
+    .col-center { text-align: center; }
+    .col-right { text-align: right; }
+
+    #message {
+      color: #999;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <h1>매매내역 정리</h1>
+  <textarea id="paste-area" placeholder="매매내역 엑셀 데이터를 여기에 붙여넣으세요..."></textarea>
+  <div id="output"></div>
+
+  <script>
+    const ASSET_ORDER = { '채권': 1, '전자단기': 2, '전자단기사채': 2, '선물': 3 };
+    const ASSET_LABELS = { '전자단기': '전자단기사채' };
+    const DATE_RE = /^\d{4}\/\d{2}\/\d{2}$/;
+
+    // 컬럼 인덱스
+    const COL = {
+      date: 0, fundCode: 2, brokerName: 4, securityName: 6,
+      assetType: 7, tradeType: 9,
+      settlementFace: 16, settlementRate: 20, maturityDate: 25
+    };
+
+    function parseNum(s) {
+      return parseFloat((s || '').replace(/,/g, '')) || 0;
+    }
+
+    function parseTradeData(raw) {
+      const records = [];
+      for (const line of raw.split(/\r?\n/)) {
+        const cols = line.split('\t');
+        if (!DATE_RE.test((cols[COL.date] || '').trim())) continue;
+        const tradeType = (cols[COL.tradeType] || '').trim();
+        if (tradeType !== '매도' && tradeType !== '매수') continue;
+
+        const faceValue = parseNum(cols[COL.settlementFace]);
+        records.push({
+          fundCode: (cols[COL.fundCode] || '').trim(),
+          brokerName: (cols[COL.brokerName] || '').trim(),
+          securityName: (cols[COL.securityName] || '').trim(),
+          assetType: (cols[COL.assetType] || '').trim(),
+          tradeType,
+          quantity: faceValue / 1e8,
+          rate: parseNum(cols[COL.settlementRate]),
+          maturityDate: (cols[COL.maturityDate] || '').trim(),
+        });
+      }
+      return records;
+    }
+
+    function groupTrades(records) {
+      const map = {};
+      for (const r of records) {
+        if (!map[r.assetType]) map[r.assetType] = { sell: [], buy: [] };
+        if (r.tradeType === '매도') map[r.assetType].sell.push(r);
+        else map[r.assetType].buy.push(r);
+      }
+      return Object.entries(map).sort(
+        ([a], [b]) => (ASSET_ORDER[a] ?? 99) - (ASSET_ORDER[b] ?? 99)
+      );
+    }
+
+    function fmtQty(q) {
+      return q % 1 === 0 ? q.toLocaleString('ko-KR') : q.toFixed(2);
+    }
+
+    function buildTable(records) {
+      if (!records.length) return '';
+      const rows = records.map(r => `
+        <tr>
+          <td class="col-trade">${r.tradeType}</td>
+          <td class="col-broker">${r.brokerName}</td>
+          <td>${r.securityName}</td>
+          <td class="col-center">${r.fundCode}</td>
+          <td class="col-center">${ASSET_LABELS[r.assetType] ?? r.assetType}</td>
+          <td class="col-right">${fmtQty(r.quantity)}</td>
+          <td class="col-right">${r.rate.toFixed(3)}</td>
+          <td class="col-center">${r.maturityDate}</td>
+        </tr>
+      `).join('');
+      return `
+        <table>
+          <thead>
+            <tr>
+              <th>매매</th><th>매매처명</th><th>종목명</th>
+              <th>펀드코드</th><th>자산</th><th>수량</th>
+              <th>금리</th><th>상환일</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    function render(raw) {
+      const output = document.getElementById('output');
+      const records = parseTradeData(raw);
+
+      if (!records.length) {
+        output.innerHTML = raw.trim()
+          ? '<p id="message">데이터를 파싱할 수 없습니다. 형식을 확인해주세요.</p>'
+          : '';
+        return;
+      }
+
+      const grouped = groupTrades(records);
+      output.innerHTML = grouped.map(([assetType, { sell, buy }]) => `
+        <div class="section">
+          <div class="section-title">${ASSET_LABELS[assetType] ?? assetType}</div>
+          ${buildTable(sell)}
+          ${buildTable(buy)}
+        </div>
+      `).join('');
+    }
+
+    document.getElementById('paste-area').addEventListener('paste', (e) => {
+      const text = e.clipboardData.getData('text');
+      setTimeout(() => render(text), 0);
+    });
+  </script>
+</body>
+</html>
