@@ -32,15 +32,30 @@
       color: #94a3b8;
     }
 
+    .paste-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+
     .paste-box {
       background: #fff;
       border: 1.5px dashed #cbd5e1;
       border-radius: 10px;
       padding: 14px 16px;
-      margin-bottom: 36px;
       transition: border-color 0.2s;
     }
     .paste-box:focus-within { border-color: #6366f1; }
+
+    .paste-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
 
     textarea {
       width: 100%;
@@ -101,7 +116,7 @@
     col.c-fund     { width: 82px; }
     col.c-asset    { width: 100px; }
     col.c-qty      { width: 76px; }
-    col.c-rate     { width: 70px; }
+    col.c-rate     { width: 76px; }
     col.c-date     { width: 92px; }
 
     thead tr {
@@ -165,10 +180,7 @@
     td.td-right { text-align: right; font-variant-numeric: tabular-nums; }
     td.td-rate  { text-align: right; font-variant-numeric: tabular-nums; color: #0f172a; font-weight: 500; }
 
-    .sub-divider {
-      height: 1px;
-      background: #e2e8f0;
-    }
+    .sub-divider { height: 1px; background: #e2e8f0; }
 
     #message {
       text-align: center;
@@ -181,48 +193,93 @@
 <body>
   <header>
     <h1>매매내역 정리</h1>
-    <p>엑셀 매매내역을 아래에 붙여넣으세요</p>
+    <p>아래 각 영역에 엑셀 매매내역을 붙여넣으세요</p>
   </header>
 
-  <div class="paste-box">
-    <textarea id="paste-area" placeholder="여기에 붙여넣기 (Ctrl+V)..."></textarea>
+  <div class="paste-row">
+    <div class="paste-box">
+      <div class="paste-label">채권 / 전자단기사채 / CP / CD</div>
+      <textarea id="bond-area" placeholder="여기에 붙여넣기 (Ctrl+V)..."></textarea>
+    </div>
+    <div class="paste-box">
+      <div class="paste-label">선물</div>
+      <textarea id="futures-area" placeholder="여기에 붙여넣기 (Ctrl+V)..."></textarea>
+    </div>
   </div>
 
   <div id="output"></div>
 
   <script>
+    // 자산 순서: 채권 → 선물 → 전자단기사채 → CP → CD
     const ASSET_ORDER  = { '채권': 1, '선물': 2, '전자단기': 3, '전자단기사채': 3, 'CP': 4, 'CD': 5 };
     const ASSET_LABELS = { '전자단기': '전자단기사채' };
-    const DATE_RE = /^\d{4}\/\d{2}\/\d{2}$/;
 
-    const COL = {
+    const BOND_DATE_RE    = /^\d{4}\/\d{2}\/\d{2}$/;
+    const FUTURES_DATE_RE = /^\d{4}\/\d{2}\/\d{2}$/;
+
+    // 채권 컬럼
+    const BCOL = {
       date: 0, fundCode: 2, brokerName: 4, securityName: 6,
       assetType: 7, tradeType: 9,
       settlementFace: 16, settlementRate: 20, maturityDate: 25
+    };
+
+    // 선물 컬럼
+    // No(0) 일자(1) 위탁사명(2) 펀드코드(3) 펀드명(4) 자산구분(5) 매매구분(6)
+    // 종목코드(7) 종목명(8) 체결단가(9) 체결계약수(10) 약정금액(11) 수수료(12) 매매처명(13) 주문번호(14)
+    const FCOL = {
+      no: 0, date: 1, fundCode: 3, assetType: 5, tradeType: 6,
+      securityName: 8, rate: 9, quantity: 10, brokerName: 13
     };
 
     function parseNum(s) {
       return parseFloat((s || '').replace(/,/g, '')) || 0;
     }
 
-    function parseTradeData(raw) {
+    function parseBondData(raw) {
       const records = [];
       for (const line of raw.split(/\r?\n/)) {
         const cols = line.split('\t');
-        if (!DATE_RE.test((cols[COL.date] || '').trim())) continue;
-        const tradeType = (cols[COL.tradeType] || '').trim();
+        if (!BOND_DATE_RE.test((cols[BCOL.date] || '').trim())) continue;
+        const tradeType = (cols[BCOL.tradeType] || '').trim();
         if (tradeType !== '매도' && tradeType !== '매수') continue;
 
-        const faceValue = parseNum(cols[COL.settlementFace]);
+        const faceValue = parseNum(cols[BCOL.settlementFace]);
         records.push({
-          fundCode:     (cols[COL.fundCode]     || '').trim(),
-          brokerName:   (cols[COL.brokerName]   || '').trim(),
-          securityName: (cols[COL.securityName] || '').trim(),
-          assetType:    (cols[COL.assetType]    || '').trim(),
+          fundCode:     (cols[BCOL.fundCode]     || '').trim(),
+          brokerName:   (cols[BCOL.brokerName]   || '').trim(),
+          securityName: (cols[BCOL.securityName] || '').trim(),
+          assetType:    (cols[BCOL.assetType]    || '').trim(),
           tradeType,
           quantity:     faceValue / 1e8,
-          rate:         parseNum(cols[COL.settlementRate]),
-          maturityDate: (cols[COL.maturityDate] || '').trim(),
+          rate:         parseNum(cols[BCOL.settlementRate]),
+          maturityDate: (cols[BCOL.maturityDate] || '').trim(),
+          isFutures:    false,
+        });
+      }
+      return records;
+    }
+
+    function parseFuturesData(raw) {
+      const records = [];
+      for (const line of raw.split(/\r?\n/)) {
+        const cols = line.split('\t');
+        // No 컬럼이 숫자이고 날짜 컬럼이 유효해야 데이터 행
+        if (!/^\d+$/.test((cols[FCOL.no] || '').trim())) continue;
+        if (!FUTURES_DATE_RE.test((cols[FCOL.date] || '').trim())) continue;
+        const tradeType = (cols[FCOL.tradeType] || '').trim();
+        if (tradeType !== '매도' && tradeType !== '매수') continue;
+
+        records.push({
+          fundCode:     (cols[FCOL.fundCode]     || '').trim(),
+          brokerName:   (cols[FCOL.brokerName]   || '').trim(),
+          securityName: (cols[FCOL.securityName] || '').trim(),
+          assetType:    '선물',
+          tradeType,
+          quantity:     parseNum(cols[FCOL.quantity]),
+          rate:         parseNum(cols[FCOL.rate]),
+          maturityDate: '',
+          isFutures:    true,
         });
       }
       return records;
@@ -231,7 +288,7 @@
     function groupTrades(records) {
       const map = {};
       for (const r of records) {
-        if (!map[r.assetType]) map[r.assetType] = { sell: [], buy: [] };
+        if (!map[r.assetType]) map[r.assetType] = { sell: [], buy: [], isFutures: r.isFutures };
         if (r.tradeType === '매도') map[r.assetType].sell.push(r);
         else map[r.assetType].buy.push(r);
       }
@@ -240,30 +297,36 @@
       );
     }
 
-    function fmtQty(q) {
+    function fmtQty(q, isFutures) {
+      if (isFutures) return q % 1 === 0 ? q.toLocaleString('ko-KR') : q.toFixed(2);
       return q % 1 === 0 ? q.toLocaleString('ko-KR') : q.toFixed(2);
     }
 
-    const COLGROUP = `
-      <colgroup>
-        <col class="c-trade"/>
-        <col class="c-broker"/>
-        <col class="c-security"/>
-        <col class="c-fund"/>
-        <col class="c-asset"/>
-        <col class="c-qty"/>
-        <col class="c-rate"/>
-        <col class="c-date"/>
-      </colgroup>
-      <thead>
-        <tr>
-          <th>매매</th><th>매매처명</th><th style="text-align:left">종목명</th>
-          <th>펀드코드</th><th>자산</th><th>수량</th><th>금리</th><th>상환일</th>
-        </tr>
-      </thead>
-    `;
+    function buildColgroup(isFutures) {
+      return `
+        <colgroup>
+          <col class="c-trade"/>
+          <col class="c-broker"/>
+          <col class="c-security"/>
+          <col class="c-fund"/>
+          <col class="c-asset"/>
+          <col class="c-qty"/>
+          <col class="c-rate"/>
+          <col class="c-date"/>
+        </colgroup>
+        <thead>
+          <tr>
+            <th>매매</th><th>매매처명</th><th style="text-align:left">종목명</th>
+            <th>펀드코드</th><th>자산</th>
+            <th>${isFutures ? '계약수' : '수량'}</th>
+            <th>${isFutures ? '단가' : '금리'}</th>
+            <th>${isFutures ? '' : '상환일'}</th>
+          </tr>
+        </thead>
+      `;
+    }
 
-    function buildTable(records) {
+    function buildTable(records, isFutures) {
       if (!records.length) return '';
       const isSell = records[0].tradeType === '매도';
       const rows = records.map(r => `
@@ -273,31 +336,34 @@
           <td class="td-left" title="${r.securityName}">${r.securityName}</td>
           <td>${r.fundCode}</td>
           <td>${ASSET_LABELS[r.assetType] ?? r.assetType}</td>
-          <td class="td-right">${fmtQty(r.quantity)}</td>
-          <td class="td-rate">${r.rate.toFixed(3)}</td>
+          <td class="td-right">${fmtQty(r.quantity, isFutures)}</td>
+          <td class="td-rate">${r.rate.toFixed(isFutures ? 2 : 3)}</td>
           <td>${r.maturityDate}</td>
         </tr>
       `).join('');
-      return `<table>${COLGROUP}<tbody>${rows}</tbody></table>`;
+      return `<table>${buildColgroup(isFutures)}<tbody>${rows}</tbody></table>`;
     }
 
-    function render(raw) {
-      const output = document.getElementById('output');
-      const records = parseTradeData(raw);
+    let bondRaw    = '';
+    let futuresRaw = '';
 
-      if (!records.length) {
-        output.innerHTML = raw.trim()
-          ? '<p id="message">데이터를 파싱할 수 없습니다. 형식을 확인해주세요.</p>'
-          : '';
+    function render() {
+      const output  = document.getElementById('output');
+      const bonds   = parseBondData(bondRaw);
+      const futures = parseFuturesData(futuresRaw);
+      const all     = [...bonds, ...futures];
+
+      if (!all.length) {
+        output.innerHTML = '';
         return;
       }
 
-      const grouped = groupTrades(records);
-      output.innerHTML = grouped.map(([assetType, { sell, buy }]) => {
-        const label   = ASSET_LABELS[assetType] ?? assetType;
-        const total   = sell.length + buy.length;
-        const sellHtml = buildTable(sell);
-        const buyHtml  = buildTable(buy);
+      const grouped = groupTrades(all);
+      output.innerHTML = grouped.map(([assetType, { sell, buy, isFutures }]) => {
+        const label    = ASSET_LABELS[assetType] ?? assetType;
+        const total    = sell.length + buy.length;
+        const sellHtml = buildTable(sell, isFutures);
+        const buyHtml  = buildTable(buy, isFutures);
         const divider  = sellHtml && buyHtml ? '<div class="sub-divider"></div>' : '';
         return `
           <div class="section">
@@ -313,9 +379,14 @@
       }).join('');
     }
 
-    document.getElementById('paste-area').addEventListener('paste', e => {
-      const text = e.clipboardData.getData('text');
-      setTimeout(() => render(text), 0);
+    document.getElementById('bond-area').addEventListener('paste', e => {
+      bondRaw = e.clipboardData.getData('text');
+      setTimeout(render, 0);
+    });
+
+    document.getElementById('futures-area').addEventListener('paste', e => {
+      futuresRaw = e.clipboardData.getData('text');
+      setTimeout(render, 0);
     });
   </script>
 </body>
