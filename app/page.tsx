@@ -13,24 +13,15 @@ function fmtQty(q: number) {
 function TradeTable({ records, isFutures }: { records: TradeRecord[]; isFutures: boolean }) {
   if (!records.length) return null;
   const isSell = records[0].tradeType === '매도';
+  const cellCls = 'px-3 py-2 text-center whitespace-nowrap border-r border-slate-200 last:border-r-0';
+  const headers = ['매매', '매매처명', '종목명', '펀드코드', '자산', isFutures ? '계약수' : '수량', isFutures ? '단가' : '금리', isFutures ? '' : '상환일'];
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
-        <colgroup>
-          <col style={{ width: 58 }} />
-          <col style={{ width: 160 }} />
-          <col style={{ width: 200 }} />
-          <col style={{ width: 82 }} />
-          <col style={{ width: 90 }} />
-          <col style={{ width: 72 }} />
-          <col style={{ width: 72 }} />
-          <col style={{ width: 92 }} />
-        </colgroup>
+      <table className="border-collapse" style={{ tableLayout: 'auto', width: '100%' }}>
         <thead>
           <tr className="border-b border-orange-200" style={{ background: '#FFEDD5' }}>
-            {['매매', '매매처명', '종목명', '펀드코드', '자산', isFutures ? '계약수' : '수량', isFutures ? '단가' : '금리', isFutures ? '' : '상환일'].map((h, i) => (
-              <th key={i} className="px-3 py-2 text-[11px] font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap"
-                style={{ textAlign: i === 2 ? 'left' : 'center' }}>
+            {headers.map((h, i) => (
+              <th key={i} className="px-3 py-2 text-[11px] font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap text-center border-r border-orange-200 last:border-r-0">
                 {h}
               </th>
             ))}
@@ -39,18 +30,18 @@ function TradeTable({ records, isFutures }: { records: TradeRecord[]; isFutures:
         <tbody>
           {records.map((r, i) => (
             <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors">
-              <td className="px-3 py-2 text-center">
+              <td className={cellCls}>
                 <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${isSell ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'}`}>
                   {r.tradeType}
                 </span>
               </td>
-              <td className="px-3 py-2 text-indigo-500 font-medium whitespace-nowrap overflow-hidden text-ellipsis">{r.brokerName}</td>
-              <td className="px-3 py-2 text-left whitespace-nowrap overflow-hidden text-ellipsis" title={r.securityName}>{r.securityName}</td>
-              <td className="px-3 py-2 text-center whitespace-nowrap">{r.fundCode}</td>
-              <td className="px-3 py-2 text-center whitespace-nowrap">{ASSET_LABELS[r.assetType] ?? r.assetType}</td>
-              <td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">{fmtQty(r.quantity)}</td>
-              <td className="px-3 py-2 text-right tabular-nums font-medium whitespace-nowrap">{r.rate.toFixed(isFutures ? 2 : 3)}</td>
-              <td className="px-3 py-2 text-center whitespace-nowrap">{r.maturityDate}</td>
+              <td className={`${cellCls} text-indigo-500 font-medium`}>{r.brokerName}</td>
+              <td className={cellCls}>{r.securityName}</td>
+              <td className={cellCls}>{r.fundCode}</td>
+              <td className={cellCls}>{ASSET_LABELS[r.assetType] ?? r.assetType}</td>
+              <td className={`${cellCls} tabular-nums`}>{fmtQty(r.quantity)}</td>
+              <td className={`${cellCls} tabular-nums font-medium`}>{r.rate.toFixed(isFutures ? 2 : 3)}</td>
+              <td className={cellCls}>{r.maturityDate}</td>
             </tr>
           ))}
         </tbody>

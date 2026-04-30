@@ -105,19 +105,9 @@
     .table-wrap { overflow-x: auto; }
 
     table {
-      width: 100%;
       border-collapse: collapse;
-      table-layout: fixed;
+      table-layout: auto;
     }
-
-    col.c-trade    { width: 58px; }
-    col.c-broker   { width: 160px; }
-    col.c-security { width: 200px; }
-    col.c-fund     { width: 82px; }
-    col.c-asset    { width: 90px; }
-    col.c-qty      { width: 72px; }
-    col.c-rate     { width: 72px; }
-    col.c-date     { width: 92px; }
 
     thead tr {
       background: #FFEDD5;
@@ -128,12 +118,14 @@
       padding: 9px 12px;
       font-size: 11px;
       font-weight: 600;
-      color: #64748b;
+      color: #475569;
       text-transform: uppercase;
       letter-spacing: 0.4px;
       white-space: nowrap;
       text-align: center;
+      border-right: 1px solid #fed7aa;
     }
+    th:last-child { border-right: none; }
 
     tbody tr {
       border-bottom: 1px solid #f1f5f9;
@@ -147,14 +139,9 @@
       color: #334155;
       text-align: center;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      border-right: 1px solid #e2e8f0;
     }
-
-    td.td-left {
-      text-align: left;
-      max-width: 0;
-    }
+    td:last-child { border-right: none; }
 
     .tag-sell {
       display: inline-block;
@@ -302,21 +289,11 @@
       return q % 1 === 0 ? q.toLocaleString('ko-KR') : q.toFixed(2);
     }
 
-    function buildColgroup(isFutures) {
+    function buildthead(isFutures) {
       return `
-        <colgroup>
-          <col class="c-trade"/>
-          <col class="c-broker"/>
-          <col class="c-security"/>
-          <col class="c-fund"/>
-          <col class="c-asset"/>
-          <col class="c-qty"/>
-          <col class="c-rate"/>
-          <col class="c-date"/>
-        </colgroup>
         <thead>
           <tr>
-            <th>매매</th><th>매매처명</th><th style="text-align:left">종목명</th>
+            <th>매매</th><th>매매처명</th><th>종목명</th>
             <th>펀드코드</th><th>자산</th>
             <th>${isFutures ? '계약수' : '수량'}</th>
             <th>${isFutures ? '단가' : '금리'}</th>
@@ -333,7 +310,7 @@
         <tr>
           <td><span class="${isSell ? 'tag-sell' : 'tag-buy'}">${r.tradeType}</span></td>
           <td class="broker-name">${r.brokerName}</td>
-          <td class="td-left" title="${r.securityName}">${r.securityName}</td>
+          <td>${r.securityName}</td>
           <td>${r.fundCode}</td>
           <td>${ASSET_LABELS[r.assetType] ?? r.assetType}</td>
           <td class="td-right">${fmtQty(r.quantity, isFutures)}</td>
@@ -341,7 +318,7 @@
           <td>${r.maturityDate}</td>
         </tr>
       `).join('');
-      return `<table>${buildColgroup(isFutures)}<tbody>${rows}</tbody></table>`;
+      return `<table>${buildthead(isFutures)}<tbody>${rows}</tbody></table>`;
     }
 
     let bondRaw    = '';
